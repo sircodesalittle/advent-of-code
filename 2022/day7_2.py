@@ -39,38 +39,6 @@ def process_ls_content(line_contents):
         # file_system[line_contents[1]] = line_contents[0]
         setInDict(file_system, cwd, line_contents[1], int(line_contents[0]))
 
-def all_keys_are_files(subdir):
-    for key in subdir.keys():
-        if isinstance(subdir[key], dict):
-            return False
-    return True
-
-def process_filesystem(subdir, current_path):
-    for key in subdir.keys():
-        if isinstance(subdir[key], dict):
-            # is dictionary
-            current_path.append(key)
-            process_filesystem(subdir[key], current_path)
-            current_path.pop()
-        elif key != 'size':
-            # is file
-            subdir['size'] = subdir['size'] + subdir[key]
-            size_path_to_retrieve = current_path.copy()
-            size_path_to_retrieve.pop()
-            size_path_to_retrieve.append('size')
-            parent_size = getFromDict(file_system, size_path_to_retrieve)
-            size_path_to_retrieve.pop()
-            setInDict(file_system, current_path, 'size', parent_size + subdir['size'])
-
-# def process_dir_size(subdir):
-#     if all_keys_are_files(subdir):
-#         for key in subdir.keys():
-#             if isinstance(subdir[key], dict):
-#                 # is dictionary
-#                 subdir['size'] += subdir['size'] + subdir[key]['size']
-#                 process_dir_size(subdir[key])
-#             elif key != 'size':
-#                 pass
 
 def part1():
     with open('./data/day7.txt') as f:
@@ -88,8 +56,8 @@ def part1():
                     if line_components[1] == 'ls':
                         processing_ls = True
     
-    process_filesystem(file_system, [])
-    # process_dir_size(file_system)
+    process_filesystem(file_system)
+    process_dir_size(file_system)
     pprint.pprint(file_system, indent=4)
             
             
