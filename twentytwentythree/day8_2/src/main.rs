@@ -4,10 +4,6 @@ use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-fn all_found_end(map: &HashMap<String, (bool, i32)>) -> bool {
-    return map.values().into_iter().all(|x| x.0);
-}
-
 fn main() {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
@@ -43,64 +39,59 @@ fn main() {
         }
     }
 
-    let mut current_nodes: HashMap<String, (bool, i32)> = HashMap::new();
-    for node in node_map.keys() {
-        if node.ends_with('A') {
-            current_nodes.insert(node.to_string(), (false, 0));
-        }
-    }
-
-    dbg!(&current_nodes);
-    let mut total_count = 0;
-    let mut found_end = all_found_end(&current_nodes);
-    if let Some(instructions) = instructions {
-        while !found_end {
-            for instruction in instructions.chars() {
-                let mut keys_to_remove = Vec::new();
-                let mut new_current_nodes = HashMap::new();
-                for current_node in current_nodes.keys() {
-                    keys_to_remove.push(String::from(current_node));
-                    let (found_end_for_node, traversal_count_for_node) =
-                        current_nodes.get(current_node).unwrap();
-
-                    let mut new_node = None;
-                    let mut new_found_end_for_node = found_end_for_node.clone();
-                    let mut new_traversal_count_for_node = traversal_count_for_node.clone();
-                    // println!("{}", current_node);
-                    let node_instructions = node_map.get(current_node).unwrap();
-                    let left_instruction = node_instructions.get(0).unwrap();
-                    let right_instruction = node_instructions.get(1).unwrap();
-                    if instruction == 'R' {
-                        new_node = Some(String::from(right_instruction));
-                    } else if instruction == 'L' {
-                        new_node = Some(String::from(left_instruction));
+    let mut first_zs = Vec::new();
+    for start_node in node_map.keys() {
+        if start_node.ends_with('A') {
+            // dbg!(&node_map);
+            let mut traversal_count = 0;
+            let mut current_node = String::from(start_node);
+            let mut found_end = false;
+            if let Some(ref instructions) = instructions {
+                while !found_end {
+                    for instruction in instructions.chars() {
+                        if !found_end {
+                            // println!("{}", current_node);
+                            let node_instructions = node_map.get(&current_node).unwrap();
+                            let left_instruction = node_instructions.get(0).unwrap();
+                            let right_instruction = node_instructions.get(1).unwrap();
+                            if instruction == 'R' {
+                                current_node = right_instruction.clone();
+                            } else if instruction == 'L' {
+                                current_node = left_instruction.clone();
+                            }
+                            // println!("moving to: {}", current_node);
+                            traversal_count += 1;
+                            if current_node.ends_with('Z') {
+                                found_end = true;
+                            }
+                        }
                     }
-                    let new_node_real = new_node.unwrap();
-                    // println!("moving to: {}", current_node);
-                    new_traversal_count_for_node += 1;
-                    if new_node_real.ends_with('Z') {
-                        new_found_end_for_node = true;
-                    } else {
-                        new_found_end_for_node = false;
-                    }
-                    new_current_nodes.insert(
-                        new_node_real,
-                        (new_found_end_for_node, new_traversal_count_for_node),
-                    );
                 }
-                total_count += 1;
-                for key_to_remove in keys_to_remove {
-                    current_nodes.remove(&key_to_remove);
-                }
-                current_nodes.extend(new_current_nodes);
-                found_end = all_found_end(&current_nodes);
+                println!("{} for {}", traversal_count, start_node);
+                first_zs.push(traversal_count);
             }
-            dbg!(&current_nodes);
         }
     }
+    dbg!(lcm(&[18673, 12361, 20777, 19199, 16043, 17621]));
 
-    dbg!(total_count);
     // 16 is not the right answer
+}
+
+// stolen from https://github.com/TheAlgorithms/Rust/blob/master/src/math/lcm_of_n_numbers.rs
+pub fn lcm(nums: &[usize]) -> usize {
+    if nums.len() == 1 {
+        return nums[0];
+    }
+    let a = nums[0];
+    let b = lcm(&nums[1..]);
+    a * b / gcd_of_two_numbers(a, b)
+}
+
+fn gcd_of_two_numbers(a: usize, b: usize) -> usize {
+    if b == 0 {
+        return a;
+    }
+    gcd_of_two_numbers(b, a % b)
 }
 
 fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
