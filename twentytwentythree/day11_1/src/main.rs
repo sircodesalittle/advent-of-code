@@ -36,6 +36,7 @@ fn main() {
         }
     }
 
+    print_universe(&universe);
     expand_rows(&mut universe);
     expand_columns(&mut universe);
     print_universe(&universe);
@@ -61,7 +62,7 @@ fn expand_rows(universe_points: &mut Vec<UniversePoint>) {
         // dbg!(&row_points);
         if row_points.iter().all(|up| up.character != '#') {
             // need to add a row
-            dbg!("Adding a row at {}", row_number);
+            // dbg!("Adding a row at {}", row_number);
             added_rows.push(row_number + 1);
             new_universe_points.extend(row_points.iter().map(|up| {
                 return UniversePoint {
@@ -78,7 +79,7 @@ fn expand_rows(universe_points: &mut Vec<UniversePoint>) {
             let add_value = added_row as u32;
             if up.y >= add_value {
                 let new_y: u32 = 1 + up.y;
-                println!("increasing point y: {} to {}", up.y, new_y);
+                // println!("increasing point y: {} to {}", up.y, new_y);
                 up.y = new_y.try_into().unwrap();
             }
         })
@@ -90,6 +91,7 @@ fn expand_rows(universe_points: &mut Vec<UniversePoint>) {
 fn expand_columns(universe_points: &mut Vec<UniversePoint>) {
     let mut new_universe_points = Vec::new();
     let mut added_columns = Vec::new();
+    let mut num_added = 0;
     for column_number in 0..get_max_x(universe_points) {
         // iterate over each row
         let column_points = universe_points
@@ -99,15 +101,19 @@ fn expand_columns(universe_points: &mut Vec<UniversePoint>) {
         // dbg!(&row_points);
         if column_points.iter().all(|up| up.character != '#') {
             // need to add a row
-            println!("Adding a row at {}", column_number);
-            added_columns.push(column_number + 1);
+            // println!("Found column of all . : at column index {}", column_number);
+            // println!("Adding a row at {}", column_number + 1);
+            added_columns.push(column_number + 1 + num_added);
             new_universe_points.extend(column_points.iter().map(|up| {
+                // println!("adding point at x: {}", up.x + 1 + num_added);
                 return UniversePoint {
-                    x: up.x + 1,
+                    x: up.x + 1 + num_added,
                     y: up.y,
                     character: '.',
                 };
             }));
+
+            num_added += 1;
         }
     }
 
@@ -116,7 +122,7 @@ fn expand_columns(universe_points: &mut Vec<UniversePoint>) {
             let add_value = added_column as u32;
             if up.x >= add_value {
                 let new_x: u32 = 1 + up.x;
-                println!("increasing point y: {} to {}", up.x, new_x);
+                // println!("increasing point x: {} to {}", up.x, new_x);
                 up.x = new_x.try_into().unwrap();
             }
         })
