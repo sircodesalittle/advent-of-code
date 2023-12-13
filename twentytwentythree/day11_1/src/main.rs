@@ -8,6 +8,7 @@ struct UniversePoint {
     x: u32,
     y: u32,
     character: char,
+    galaxy_id: String,
 }
 
 impl UniversePoint {
@@ -29,6 +30,7 @@ fn main() {
                         character: character,
                         x: x.try_into().unwrap(),
                         y: y.try_into().unwrap(),
+                        galaxy_id: "".to_string(),
                     };
                     universe.push(universe_point);
                 }
@@ -37,9 +39,16 @@ fn main() {
     }
 
     print_universe(&universe);
-    expand_rows(&mut universe);
     expand_columns(&mut universe);
+    expand_rows(&mut universe);
     print_universe(&universe);
+    let mut galaxies = number_and_get_galaxies(&mut universe);
+    dbg!(&galaxies.len());
+    // dbg!(&galaxies);
+    let total = get_shortest_path_length(&mut galaxies);
+    dbg!(total);
+
+    // 9652524 - too high
 }
 
 fn get_max_y(universe_points: &Vec<UniversePoint>) -> u32 {
@@ -69,6 +78,7 @@ fn expand_rows(universe_points: &mut Vec<UniversePoint>) {
                     x: up.x,
                     y: up.y + 1,
                     character: '.',
+                    galaxy_id: String::from(""),
                 };
             }));
         }
@@ -110,6 +120,7 @@ fn expand_columns(universe_points: &mut Vec<UniversePoint>) {
                     x: up.x + 1 + num_added,
                     y: up.y,
                     character: '.',
+                    galaxy_id: "".to_string(),
                 };
             }));
 
@@ -138,10 +149,52 @@ fn print_universe(universe: &Vec<UniversePoint>) {
                 .iter()
                 .position(|up| up.x == column && up.y == row)
                 .unwrap();
-            print!("{}", universe.get(position).unwrap().character);
+            let point_to_print = universe.get(position).unwrap();
+            if point_to_print.is_galaxy() {
+                print!("{}", point_to_print.character);
+            } else {
+                print!("{}", point_to_print.character);
+            }
         }
         print!("\n");
     }
+}
+
+fn number_and_get_galaxies(universe: &mut Vec<UniversePoint>) -> Vec<UniversePoint> {
+    let mut galaxy_id = 1;
+    let mut galaxies = Vec::new();
+    for point in universe {
+        if point.is_galaxy() {
+            point.galaxy_id = galaxy_id.to_string();
+            galaxy_id += 1;
+            galaxies.push(point.clone());
+        }
+    }
+    return galaxies;
+}
+
+fn get_path_length(galaxy_a: &UniversePoint, galaxy_b: &UniversePoint) -> u32 {
+    let mut distance = 1;
+    let y = (galaxy_a.y as i32) - (galaxy_b.y as i32).abs();
+    let x = (galaxy_a.x as i32) - (galaxy_b.x as i32).abs();
+    distance = y.abs() + x.abs();
+    // dbg!(distance);
+    // dbg!(galaxy_a);
+    // dbg!(galaxy_b);
+    // dbg!(x);
+    // dbg!(y);
+    return distance as u32;
+}
+
+fn get_shortest_path_length(galaxies: &mut Vec<UniversePoint>) -> u32 {
+    let mut total_distance = 0;
+    while let Some(temp) = galaxies.pop() {
+        total_distance += galaxies
+            .iter()
+            .map(|g| return get_path_length(g, &temp))
+            .sum::<u32>();
+    }
+    return total_distance;
 }
 
 // The output is wrapped in a Result to allow matching on errors
