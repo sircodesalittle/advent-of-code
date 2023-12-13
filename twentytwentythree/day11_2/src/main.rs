@@ -5,12 +5,12 @@ use std::path::Path;
 
 #[derive(Clone, Debug)]
 struct UniversePoint {
-    x: u32,
-    y: u32,
+    x: u128,
+    y: u128,
     character: char,
     galaxy_id: String,
-    x_offset: u32,
-    y_offset: u32,
+    x_offset: u128,
+    y_offset: u128,
 }
 
 impl UniversePoint {
@@ -18,12 +18,12 @@ impl UniversePoint {
         return self.character == '#';
     }
 
-    fn get_total_y(&self) -> i32 {
-        return (self.y + self.y_offset) as i32;
+    fn get_total_y(&self) -> i128 {
+        return (self.y + self.y_offset) as i128;
     }
 
-    fn get_total_x(&self) -> i32 {
-        return (self.x + self.x_offset) as i32;
+    fn get_total_x(&self) -> i128 {
+        return (self.x + self.x_offset) as i128;
     }
 }
 
@@ -50,25 +50,22 @@ fn main() {
         }
     }
 
-    print_universe(&universe);
+    // print_universe(&universe);
     expand_columns(&mut universe);
     expand_rows(&mut universe);
-    print_universe(&universe);
+    // print_universe(&universe);
     let mut galaxies = number_and_get_galaxies(&mut universe);
     dbg!(&galaxies.len());
     // dbg!(&galaxies);
     let total = get_shortest_path_length(&mut galaxies);
     dbg!(total);
-
-    // 9652524 - too high
-    // 9647174
 }
 
-fn get_max_y(universe_points: &Vec<UniversePoint>) -> u32 {
+fn get_max_y(universe_points: &Vec<UniversePoint>) -> u128 {
     return universe_points.iter().max_by_key(|up| up.y).unwrap().y;
 }
 
-fn get_max_x(universe_points: &Vec<UniversePoint>) -> u32 {
+fn get_max_x(universe_points: &Vec<UniversePoint>) -> u128 {
     return universe_points.iter().max_by_key(|up| up.x).unwrap().x;
 }
 
@@ -83,9 +80,9 @@ fn expand_rows(universe_points: &mut Vec<UniversePoint>) {
         if row_points.iter().all(|up| up.character != '#') {
             // need to add a row
             universe_points.iter_mut().for_each(|up| {
-                let add_value = (row_number as u32) + 1;
+                let add_value = (row_number as u128) + 1;
                 if up.y >= add_value {
-                    up.y_offset += 1;
+                    up.y_offset += 1000000 - 1;
                 }
             })
         }
@@ -103,9 +100,9 @@ fn expand_columns(universe_points: &mut Vec<UniversePoint>) {
         if column_points.iter().all(|up| up.character != '#') {
             // need to add a column
             universe_points.iter_mut().for_each(|up| {
-                let add_value = (column_number as u32) + 1;
+                let add_value = (column_number as u128) + 1;
                 if up.x >= add_value {
-                    up.x_offset += 1;
+                    up.x_offset += 1000000 - 1;
                 }
             })
         }
@@ -143,7 +140,7 @@ fn number_and_get_galaxies(universe: &mut Vec<UniversePoint>) -> Vec<UniversePoi
     return galaxies;
 }
 
-fn get_path_length(galaxy_a: &UniversePoint, galaxy_b: &UniversePoint) -> u32 {
+fn get_path_length(galaxy_a: &UniversePoint, galaxy_b: &UniversePoint) -> u128 {
     let mut distance = 1;
     let x = galaxy_a.get_total_x() - galaxy_b.get_total_x();
     let y = galaxy_a.get_total_y() - galaxy_b.get_total_y();
@@ -153,16 +150,16 @@ fn get_path_length(galaxy_a: &UniversePoint, galaxy_b: &UniversePoint) -> u32 {
     // dbg!(galaxy_b);
     // dbg!(x);
     // dbg!(y);
-    return distance as u32;
+    return distance as u128;
 }
 
-fn get_shortest_path_length(galaxies: &mut Vec<UniversePoint>) -> u32 {
+fn get_shortest_path_length(galaxies: &mut Vec<UniversePoint>) -> u128 {
     let mut total_distance = 0;
     while let Some(temp) = galaxies.pop() {
         total_distance += galaxies
             .iter()
             .map(|g| return get_path_length(g, &temp))
-            .sum::<u32>();
+            .sum::<u128>();
     }
     return total_distance;
 }
