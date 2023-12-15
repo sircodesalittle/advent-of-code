@@ -1,87 +1,100 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::env::{self};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 
-#[derive(Clone, Debug)]
+#[derive(Eq, Hash, PartialEq)]
 struct SpringRow {
     record: String,
-    contiguous_groups: Vec<u8>,
+    contiguous_groups: Vec<i32>,
 }
 
-fn get_combinations(number_of_unknown: u8) -> Vec<String> {
-    // credits: https://stackoverflow.com/questions/67746583/get-all-combinations-of-a-vector-of-n-chars
-    let characters = vec![".", "#"];
-    let n = number_of_unknown;
-
-    let combinations: Vec<_> = (2..n).fold(
-        characters
-            .iter()
-            .map(|c| characters.iter().map(move |&d| d.to_owned() + *c))
-            .flatten()
-            .collect(),
-        |acc, _| {
-            acc.into_iter()
-                .map(|c| characters.iter().map(move |&d| d.to_owned() + &*c))
-                .flatten()
-                .collect()
-        },
-    );
-    return combinations;
+struct Memoized {
+    map: HashMap<SpringRow, i64>,
 }
 
-impl SpringRow {
-    fn get_different_arrangements(&self) -> HashSet<String> {
-        let mut possible_arrangements = HashSet::new();
-        let num_questions = self.record.matches("?").collect::<Vec<&str>>().len();
-        for combination in get_combinations(num_questions as u8) {
-            let mut new_arrangement = self.record.clone();
-            for possible in combination.chars() {
-                let new_new = new_arrangement.replacen("?", possible.to_string().as_str(), 1);
-                new_arrangement = new_new;
-            }
-            possible_arrangements.insert(new_arrangement);
+impl Memoized {
+    fn new() -> Memoized {
+        Memoized {
+            map: HashMap::new(),
         }
-        return possible_arrangements;
+    }
+}
+
+fn count_possible_arrangements(
+    condition: &str,
+    groups: &[i32],
+    memoization_map: &mut Memoized,
+) -> i64 {
+    let input = SpringRow {
+        record: condition.to_string(),
+        contiguous_groups: groups.to_vec(),
+    };
+
+    if memoization_map.map.contains_key(&input) {
+        return *memoization_map.map.get(&input).unwrap();
     }
 
-    fn get_num_different_arrangements(&self) -> u32 {
-        let mut arrangements = 0;
-        let arrangements_to_test = self.get_different_arrangements();
-        for possible_arrangement in arrangements_to_test {
-            if self.is_valid_arrangement(&possible_arrangement) {
-                arrangements += 1;
-            }
-        }
-        return arrangements;
+    if condition.is_empty() {
+        if groups.is_empty() {
+            return 1;
+        } else {
+            return 0;
+        };
     }
 
-    fn is_valid_arrangement(&self, possible_arrangement: &String) -> bool {
-        let mut arrangements = self.contiguous_groups.clone();
-        arrangements.reverse();
-        let mut chars: Vec<char> = possible_arrangement.chars().collect();
-        chars.dedup_by(|a, b| *a == '.' && *b == '.');
-        let removed_dup_periods: String = chars.iter().collect();
-        let groups_to_validate: Vec<&str> = removed_dup_periods
-            .split(".")
-            .filter(|x| *x != "")
-            .collect();
+    let first_char = condition.chars().next().unwrap();
+    let mut permutations = 0;
 
-        if groups_to_validate.len() != arrangements.len() {
-            return false;
-        }
+    if first_char == '.' {
+        permutations = count_possible_arrangements(&condition[1..], groups, memoization_map);
+    } else if first_char == '?' {
+        permutations =
+            count_possible_arrangements(&format!(".{}", &condition[1..]), groups, memoization_map)
+                + count_possible_arrangements(
+                    &format!("#{}", &condition[1..]),
+                    groups,
+                    memoization_map,
+                );
+    } else {
+        if groups.is_empty() {
+            permutations = 0;
+        } else {
+            let nr_damaged = groups[0] as usize;
 
-        let mut is_valid = true;
-        let mut group_index = 0;
-        while let Some(grouping) = arrangements.pop() {
-            if grouping as usize != groups_to_validate[group_index].len() {
-                is_valid = false;
+            if nr_damaged <= condition.len()
+                && condition
+                    .chars()
+                    .take(nr_damaged)
+                    .all(|c| c == '#' || c == '?')
+            {
+                let new_groups = &groups[1..];
+                if nr_damaged == condition.len() {
+                    permutations = if new_groups.is_empty() { 1 } else { 0 };
+                } else if condition.chars().nth(nr_damaged).unwrap() == '.' {
+                    permutations = count_possible_arrangements(
+                        &condition[nr_damaged + 1..],
+                        new_groups,
+                        memoization_map,
+                    );
+                } else if condition.chars().nth(nr_damaged).unwrap() == '?' {
+                    permutations = count_possible_arrangements(
+                        &format!(".{}", &condition[nr_damaged + 1..]),
+                        new_groups,
+                        memoization_map,
+                    );
+                } else {
+                    permutations = 0;
+                }
+            } else {
+                permutations = 0;
             }
-            group_index += 1;
         }
-        return is_valid;
     }
+
+    memoization_map.map.insert(input, permutations);
+    return permutations;
 }
 
 fn main() {
@@ -94,23 +107,46 @@ fn main() {
         for line in lines {
             if let Ok(ready_line) = line {
                 let (springs_str, contiguous_str) = ready_line.split_once(" ").unwrap();
+                let mut spring_record = springs_str.to_string();
+                spring_record.push('?');
+                spring_record.push_str(springs_str);
+                spring_record.push('?');
+                spring_record.push_str(springs_str);
+                spring_record.push('?');
+                spring_record.push_str(springs_str);
+                spring_record.push('?');
+                spring_record.push_str(springs_str);
+
+                let original_groups = contiguous_str
+                    .split(',')
+                    .into_iter()
+                    .map(|g| return g.parse::<i32>().unwrap())
+                    .collect::<Vec<i32>>();
+
+                let mut groups = Vec::new();
+                groups.extend(original_groups.clone());
+                groups.extend(original_groups.clone());
+                groups.extend(original_groups.clone());
+                groups.extend(original_groups.clone());
+                groups.extend(original_groups.clone());
                 let spring_row = SpringRow {
-                    record: springs_str.to_string(),
-                    contiguous_groups: contiguous_str
-                        .split(',')
-                        .into_iter()
-                        .map(|g| return g.parse::<u8>().unwrap())
-                        .collect::<Vec<u8>>(),
+                    record: spring_record,
+                    contiguous_groups: groups,
                 };
                 spring_rows.push(spring_row);
             }
         }
     }
 
+    let mut memoization_map = Memoized::new();
     let mut total = 0;
     for (index, spring_row) in spring_rows.iter().enumerate() {
         println!("Working on {}/{}", index + 1, spring_rows.len());
-        total += spring_row.get_num_different_arrangements();
+        total += count_possible_arrangements(
+            &spring_row.record,
+            &spring_row.contiguous_groups,
+            &mut memoization_map,
+        )
     }
     dbg!(total);
 }
